@@ -34,13 +34,68 @@ def add(user_id, task_text):
     
 
 def get(user_id):
-    pass
+    with sqlite3.connect(Database) as conn:
+        conn.row_factory = sqlite3.Row
 
-def edit_task_status(task_id, new_status):
-    pass
+        cursor = conn.execute("""
+            SELECT
+                id,
+                user_id,
+                task_text,
+                status
+            FROM todos
+            WHERE user_id = ?
+        """, (user_id,))
+        return [dict(row) for row in cursor.fetchall()]
+    conn.close() 
 
-def edit_task_text(task_id, new_text):
-    pass
+def edit_task_status(task_id,user_id, new_status):
+    if new_status not in ("pending", "done"):
+        raise ValueError("Status must be pending or done.")
 
-def delete(task_id):
-    pass
+    with sqlite3.connect(Database) as conn:
+        cursor = conn.execute("""
+            UPDATE todos
+            SET status = ?
+            WHERE id = ?
+              AND user_id = ?
+        """, (
+            new_status,
+            task_id,
+            user_id
+        ))
+
+        return cursor.rowcount > 0
+    
+
+def edit_task_text(task_id,user_id, new_text):
+    new_text = new_text.strip()
+    if not new_text:
+        raise ValueError("task text cannot be empty :/ .")
+
+    with sqlite3.connect(Database) as conn:
+        cursor = conn.execute("""
+            UPDATE todos
+            SET task_text = ?
+            WHERE id = ?
+              AND user_id = ?
+        """, (
+            new_text,
+            task_id,
+            user_id
+        ))
+
+        return cursor.rowcount > 0
+
+def delete(task_id,user_id):
+    with sqlite3.connect(Database) as conn:
+        cursor = conn.execute("""
+            DELETE FROM todos
+            WHERE id = ?
+              AND user_id = ?
+        """, (
+            task_id,
+            user_id
+        ))
+
+        return cursor.rowcount > 0
