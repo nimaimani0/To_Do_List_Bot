@@ -7,10 +7,10 @@ def add(user_id, task_text):
 def get(user_id):
     pass
 
-def edit_task_status():
+def edit_task_status(task_id, new_status):
     pass
 
-def edit_task_text():
+def edit_task_text(task_id, new_text):
     pass
 
 def delete(task_id):
