@@ -14,7 +14,7 @@ def init():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
             task_text TEXT NOT NULL,
-            status INTEGER NOT NULL DEFAULT 0
+            status INTEGER NOT NULL DEFAULT "pending"
         )
     """)
 
