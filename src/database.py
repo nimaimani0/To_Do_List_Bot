@@ -23,7 +23,15 @@ def init():
     
 
 def add(user_id, task_text):
-    pass
+    """add new todo"""
+    task_text=task_text.strip()
+    if not task_text:
+        raise ValueError("task text cant be empty:/ ")
+    with sqlite3.connect(Database)as conn:
+        cursor=conn.execute("""user_id,task_text,status)VALUES(?,?,"pending")"""
+                            ,(user_id,task_text))
+        return cursor.lastrowid
+    
 
 def get(user_id):
     pass
