@@ -1,4 +1,5 @@
 import sqlite3
+
 Database="database.db"
 def init():
     """
@@ -28,7 +29,7 @@ def add(user_id, task_text):
     if not task_text:
         raise ValueError("task text cant be empty:/ ")
     with sqlite3.connect(Database)as conn:
-        cursor=conn.execute("""user_id,task_text,status)VALUES(?,?,"pending")"""
+        cursor=conn.execute("""INSERT‌ INTO‌ todos (user_id,task_text,status) VALUES(?,?,"pending")"""
                             ,(user_id,task_text))
         return cursor.lastrowid
     
@@ -47,7 +48,6 @@ def get(user_id):
             WHERE user_id = ?
         """, (user_id,))
         return [dict(row) for row in cursor.fetchall()]
-    conn.close() 
 
 def edit_task_status(task_id,user_id, new_status):
     if new_status not in ("pending", "done"):
