@@ -21,26 +21,27 @@ def main_keyboard(tasks, selected_date):
     for task in sorted_tasks:
         text = task["task_text"]
         time_str = task["task_time"]
+        priority = task.get("priority", "normal")
 
         if task["status"] == "done":
             strikethrough_text = "".join([char + chr(822) for char in text])
             display_text = f"✅ [{time_str}] {strikethrough_text}"
         else:
-            display_text = f"🕒 [{time_str}] {text}"
+            p_emoji = "🔴" if priority == "high" else "🟢" if priority == "low" else "🟡"
+            display_text = f"{p_emoji} [{time_str}] {text}"
 
         keyboard.append([
-            InlineKeyboardButton(
-                text=display_text,
-                callback_data=f"task:{task['id']}:{selected_date}"
-            )
+            InlineKeyboardButton(text=display_text, callback_data=f"task:{task['id']}:{selected_date}")
         ])
 
     if not is_past_date(selected_date):
         keyboard.append([
-            InlineKeyboardButton(text="🟢 Add Task", callback_data=f"add:{selected_date}"),
+            InlineKeyboardButton(text="➕ Add New Task", callback_data=f"add:{selected_date}"),
         ])
 
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
 
 def task_keyboard(task_id, task_date, status="pending"):
     if is_past_date(task_date):
@@ -48,7 +49,7 @@ def task_keyboard(task_id, task_date, status="pending"):
             [InlineKeyboardButton(text="📅 Reschedule", callback_data=f"edit_date:{task_id}:{task_date}")],
             [
                 InlineKeyboardButton(text="✅ Done", callback_data=f"done:{task_id}:{task_date}"),
-                InlineKeyboardButton(text="🗑 Delete", callback_data=f"delete:{task_id}:{task_date}")
+                InlineKeyboardButton(text="🗑 Delete", callback_data=f"delete_req:{task_id}:{task_date}")
             ],
             [InlineKeyboardButton(text="◀️ Back to Tasks", callback_data=f"day:{task_date}")]
         ])
@@ -60,13 +61,71 @@ def task_keyboard(task_id, task_date, status="pending"):
             ])
         else:
             return InlineKeyboardMarkup(inline_keyboard=[
+                [InlineKeyboardButton(text="🔔 Reminders", callback_data=f"rem_menu:{task_id}:{task_date}")],
                 [InlineKeyboardButton(text="✏️ Edit", callback_data=f"edit_menu:{task_id}:{task_date}")],
                 [
                     InlineKeyboardButton(text="✅ Done", callback_data=f"done:{task_id}:{task_date}"),
-                    InlineKeyboardButton(text="🗑 Delete", callback_data=f"delete:{task_id}:{task_date}")
+                    InlineKeyboardButton(text="🗑 Delete", callback_data=f"delete_req:{task_id}:{task_date}")
                 ],
                 [InlineKeyboardButton(text="◀️ Back to Tasks", callback_data=f"day:{task_date}")]
             ])
+
+def delete_confirm_keyboard(task_id, task_date):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🗑 Yes, Delete Task", callback_data=f"confirm_delete:{task_id}:{task_date}"),
+            InlineKeyboardButton(text="❌ No, Cancel", callback_data=f"task:{task_id}:{task_date}")
+        ]
+    ])
+
+
+def after_add_keyboard(selected_date, task_id):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔔 Add Reminder", callback_data=f"add_rem_menu:{task_id}:{selected_date}")],
+        [InlineKeyboardButton(text="◀️ Back to Tasks", callback_data=f"day:{selected_date}")]
+    ])
+
+def reminders_management_keyboard(task_id, task_date, reminders):
+    keyboard = []
+    for rem in reminders:
+        display = f"⏰ {rem['remind_date']} | {rem['remind_time']}"
+        keyboard.append([
+            InlineKeyboardButton(text=f"🗑 Delete: {display}", callback_data=f"del_rem_req:{rem['id']}:{task_id}:{task_date}")
+        ])
+    keyboard.append([InlineKeyboardButton(text="➕ Add Reminder", callback_data=f"add_rem_menu:{task_id}:{task_date}")])
+    keyboard.append([InlineKeyboardButton(text="◀️ Back to Task", callback_data=f"task:{task_id}:{task_date}")])
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+def reminder_toggle_keyboard(task_id, task_date, selected_options=None):
+    if selected_options is None:
+        selected_options = []
+    opts = {
+        "5m": "5 Mins Before",
+        "15m": "15 Mins Before",
+        "30m": "30 Mins Before",
+        "1h": "1 Hour Before",
+        "1d": "1 Day Before"
+    }
+    keyboard = []
+    for key, text in opts.items():
+        marker = "✅ " if key in selected_options else ""
+        keyboard.append([
+            InlineKeyboardButton(text=f"{marker}{text}", callback_data=f"toggle_rem:{key}:{task_id}:{task_date}")
+        ])
+
+    keyboard.append([InlineKeyboardButton(text="⚙️ Custom Date/Time", callback_data=f"custom_rem:{task_id}:{task_date}")])
+    keyboard.append([InlineKeyboardButton(text="💾 Save Reminders", callback_data=f"save_rems:{task_id}:{task_date}")])
+    keyboard.append([InlineKeyboardButton(text="❌ Cancel", callback_data=f"rem_menu:{task_id}:{task_date}")])
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+def delete_reminder_confirm_keyboard(reminder_id, task_id, task_date):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="🗑 Yes, Delete Reminder", callback_data=f"confirm_del_rem:{reminder_id}:{task_id}:{task_date}"),
+            InlineKeyboardButton(text="❌ Cancel", callback_data=f"rem_menu:{task_id}:{task_date}")
+        ]
+    ])
+
 
 def archive_keyboard(task_id, task_date):
     return InlineKeyboardMarkup(inline_keyboard=[
@@ -90,6 +149,7 @@ def edit_keyboard(task_id, task_date):
             InlineKeyboardButton(text="📅 Edit Date", callback_data=f"edit_date:{task_id}:{task_date}"),
             InlineKeyboardButton(text="⏰ Edit Time", callback_data=f"edit_time:{task_id}:{task_date}")
         ],
+        [InlineKeyboardButton(text="🏷 Edit Priority", callback_data=f"edit_prio_menu:{task_id}:{task_date}")],
         [InlineKeyboardButton(text="◀️ Back", callback_data=f"task:{task_id}:{task_date}")]
     ])
 
@@ -238,10 +298,34 @@ def time_picker_keyboard(hour: int, minute: int):
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 
-def delete_confirm_keyboard(task_id, task_date):
+def reminder_notification_keyboard(task_id, task_date):
     return InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="🗑 Yes, Delete", callback_data=f"confirm_delete:{task_id}:{task_date}"),
-            InlineKeyboardButton(text="❌ No, Cancel", callback_data=f"task:{task_id}:{task_date}")
-        ]
+        [InlineKeyboardButton(text="✅ Mark as Done", callback_data=f"rem_done:{task_id}:{task_date}")],
+        [InlineKeyboardButton(text="⚙️ Manage Task", callback_data=f"rem_manage:{task_id}:{task_date}")],
+        [InlineKeyboardButton(text="🧹 Got it!", callback_data="rem_got_it")]
+    ])
+
+def rem_date_calendar_keyboard(task_id, task_date):
+    keyboard = calendar_keyboard(get_tehran_today().year, get_tehran_today().month, get_tehran_today(), allow_past=False).inline_keyboard
+    for row in keyboard:
+        for button in row:
+            if button.callback_data and button.callback_data.startswith("day:"):
+                chosen = button.callback_data.split(":", 1)[1]
+                button.callback_data = f"rem_date_pick:{task_id}:{task_date}:{chosen}"
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def priority_keyboard():
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔴 High Priority", callback_data="new_prio:high")],
+        [InlineKeyboardButton(text="🟡 Normal Priority", callback_data="new_prio:normal")],
+        [InlineKeyboardButton(text="🟢 Low Priority", callback_data="new_prio:low")]
+    ])
+
+def edit_priority_keyboard(task_id, task_date):
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔴 High Priority", callback_data=f"set_prio:{task_id}:{task_date}:high")],
+        [InlineKeyboardButton(text="🟡 Normal Priority", callback_data=f"set_prio:{task_id}:{task_date}:normal")],
+        [InlineKeyboardButton(text="🟢 Low Priority", callback_data=f"set_prio:{task_id}:{task_date}:low")],
+        [InlineKeyboardButton(text="❌ Cancel", callback_data=f"edit_menu:{task_id}:{task_date}")]
     ])
