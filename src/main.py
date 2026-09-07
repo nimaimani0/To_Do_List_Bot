@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from aiogram import Bot, Dispatcher
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import pytz
@@ -10,7 +11,8 @@ import database
 import handlers
 import keyboards
 
-API_TOKEN = "8903844663:AAEIRIaLZkHJL32RJ9wu6w7XTm6gzUFhvG8"
+API_TOKEN = os.getenv("BOT_TOKEN")
+
 
 async def check_reminders(bot: Bot):
     tehran_tz = pytz.timezone("Asia/Tehran")
